@@ -6,6 +6,160 @@ import weasyprint
 from datetime import datetime
 import tempfile
 import supabase
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import os
+
+
+def send(f,t,s):
+# Email details
+  from_email = f
+  to_email = t
+  subject = s
+  html = """
+  <html lang="ar" dir="rtl">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+      <title>Rushita - وصفتك الطبية الرقمية</title>
+      <style>
+          body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              margin: 0;
+              padding: 0;
+              background-color: #f5f5f5;
+              color: #333;
+              direction: rtl;
+          }
+          .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background-color: #ffffff;
+              border-radius: 8px;
+              overflow: hidden;
+              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+              background-color: #1e88e5;
+              color: white;
+              padding: 20px;
+              text-align: center;
+          }
+          .logo {
+              font-size: 28px;
+              font-weight: bold;
+              letter-spacing: 1px;
+          }
+          .content {
+              padding: 30px;
+          }
+          .prescription-info {
+              background-color: #f1f8ff;
+              border-radius: 6px;
+              padding: 20px;
+              margin-bottom: 20px;
+          }
+          .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 10px;
+          }
+          .info-title {
+              font-weight: bold;
+              color: #0d47a1;
+          }
+          .button-container {
+              text-align: center;
+              margin: 30px 0;
+          }
+          .button {
+              display: inline-block;
+              background-color: #1e88e5;
+              color: white;
+              font-weight: bold;
+              text-decoration: none;
+              padding: 12px 30px;
+              border-radius: 4px;
+              transition: background-color 0.3s;
+          }
+          .button:hover {
+              background-color: #0d47a1;
+          }
+          .footer {
+              background-color: #1e88e5;
+              color: white;
+              text-align: center;
+              padding: 15px;
+              font-size: 14px;
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="header">
+              <div class="logo">Rushita</div>
+              <p>منصتك الرقمية للوصفات الطبية</p>
+          </div>
+          
+          <div class="content">
+              <h2>مرحباً بك في Rushita</h2>
+              <p>تم إصدار وصفة طبية جديدة لك. يمكنك الوصول إليها والاطلاع على تفاصيلها من خلال الرابط أدناه.</p>
+              
+              
+              
+              <div class="button-container">
+                  <a href="""
+  
+  html1=f"https://wyypjyfyldeqnzvylsmt.supabase.co/storage/v1/object/public/pdfs//{s}" 
+              
+              
+  html2="""
+  class="button">عرض الوصفة الطبية</a>
+  </div>
+              <p>إذا كانت لديك أية استفسارات، يرجى التواصل مع طبيبك أو الاتصال بفريق دعم Rushita.</p>
+              <p>نتمنى لك دوام الصحة والعافية.</p>
+          </div>
+          
+          <div class="footer">
+              <p>© 2025 Rushita - جميع الحقوق محفوظة</p>
+              <p>هذه الرسالة سرية وموجهة فقط للشخص المعني</p>
+          </div>
+      </div>
+  </body>
+  </html>
+  """
+
+
+
+  # Create message container
+  message = MIMEMultipart("alternative")
+  message["Subject"] = subject
+  message["From"] = from_email
+  message["To"] = to_email
+
+  # Attach the HTML part
+  html_part = MIMEText(html+html1+html2, "html")
+  message.attach(html_part)
+
+  # SMTP settings
+  smtp_server = "smtp.gmail.com"
+  smtp_port = 587
+  smtp_user = os.getenv("USERTP")
+  smtp_password = os.getenv("PWDTP")
+
+  # Send the email
+  try:
+      server = smtplib.SMTP(smtp_server, smtp_port)
+      server.starttls()
+      server.login(smtp_user, smtp_password)
+      server.sendmail(from_email, to_email, message.as_string())
+      print("Email sent successfully.")
+      server.quit()
+  except Exception as e:
+      print("Error sending email:", e)
+
 
 
 # Initialize Supabase client
@@ -30,6 +184,7 @@ app.add_middleware(
 
 # Define request model for HTML content
 class PrescriptionRequest(BaseModel):
+    sendToValue : str
     html_content: str
     patient_name: str  # Optional fields to use in filename
 
@@ -45,6 +200,7 @@ async def generate_prescription(data: PrescriptionRequest):
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
             # Generate PDF from the HTML content received from frontend
             weasyprint.HTML(string=data.html_content).write_pdf(temp_file.name)
+            send(os.getenv("USERTP"),data.sendToValue,filename)
             
             # Upload the PDF to Supabase storage
             with open(temp_file.name, 'rb') as pdf_file:
