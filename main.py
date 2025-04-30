@@ -112,7 +112,7 @@ def send(f,t,s):
               <div class="button-container">
                   <a href="""
   
-  html1=f"https://wyypjyfyldeqnzvylsmt.supabase.co/storage/v1/object/public/pdfs//{s}" 
+  html1=f"https://rushitaview.onrender.com/?rx={s}" 
               
               
   html2="""
